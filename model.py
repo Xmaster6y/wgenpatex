@@ -61,19 +61,19 @@ class generator(nn.Module):
         self.cb1 = nn.ModuleList()
         self.cb2 = nn.ModuleList()
         self.up = nn.ModuleList()
-        
-        for n in range(0, nlayers):
+
+        for n in range(nlayers):
             self.up.append(Up_Bn2D((n+1)*ch_step).to(device))
             self.cb1.append(Conv_block2D(ch_in,ch_step).to(device))
             self.cb2.append(Conv_block2D((n+2)*ch_step,(n+2)*ch_step).to(device))
-        
+
         self.last_conv = nn.Conv2d((nlayers+1)*ch_step, 3, 1, padding=0, bias=False).to(device)
 
     def forward(self, z):
 
         nlayers=self.nlayers
         y = self.first_conv(z[0])
-        for n in range(0,nlayers):
+        for n in range(nlayers):
             y = self.up[n](y)
             y = torch.cat((y, self.cb1[n](z[n+1])), 1)
             y = self.cb2[n](y)
@@ -86,6 +86,17 @@ def sample_fake_img(G, size, n_samples=1):
     strow = int(np.ceil(size[2])/2**G.nlayers)
     stcol = int(np.ceil(size[3])/2**G.nlayers)
     # input noise and forward pass
-    ztab = [torch.rand(n_samples, G.ch_in, 8+2**k*strow+4*int(k!=0), 8+2**k*stcol+4*int(k!=0), device=DEVICE, dtype=torch.float) for k in range(0, G.nlayers+1)]
+    ztab = [
+        torch.rand(
+            n_samples,
+            G.ch_in,
+            8 + 2 ** k * strow + 4 * int(k != 0),
+            8 + 2 ** k * stcol + 4 * int(k != 0),
+            device=DEVICE,
+            dtype=torch.float,
+        )
+        for k in range(G.nlayers + 1)
+    ]
+
     Z = [Variable(z) for z in ztab]
     return G(Z)
