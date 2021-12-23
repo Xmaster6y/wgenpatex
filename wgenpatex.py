@@ -102,11 +102,15 @@ class semidual(nn.Module):
             sy2_j = LazyTensor(self.y2.unsqueeze(2).contiguous())
             rmv = sx2_i + sy2_j - 2*(x_i*y_j).sum(-1) - v_j
             amin = rmv.argmin(dim=1).view(-1)
-            loss = torch.mean(torch.sum((inputx-y[amin,:])**2,1)-self.psi[amin]) + torch.mean(self.psi)
+            return torch.mean(
+                torch.sum((inputx - y[amin, :]) ** 2, 1) - self.psi[amin]
+            ) + torch.mean(self.psi)
+
         else:
             cxy = torch.sum(inputx**2,1,keepdim=True) + self.y2 - 2*torch.matmul(inputx,self.yt)
-            loss = torch.mean(torch.min(cxy - self.psi.unsqueeze(0),1)[0]) + torch.mean(self.psi)
-        return loss
+            return torch.mean(
+                torch.min(cxy - self.psi.unsqueeze(0), 1)[0]
+            ) + torch.mean(self.psi)
     
 class gaussian_layer(nn.Module): 
     """
@@ -174,19 +178,19 @@ def optim_synthesis(args):
     usekeops = args.keops
     visu = args.visu
     save = args.save
-    
+
     # fixed parameters
     monitoring_step=50
     saving_folder='tmp/'
-    
+
     # parameters for Gaussian downsampling
     gaussian_kernel_size = 4
     gaussian_std = 1
     stride = 2
-    
+
     # load image
     target_img = imread(target_img_name)
-    
+
     # synthesized size
     if args.size is None:
         nrow = target_img.shape[2]
@@ -194,14 +198,14 @@ def optim_synthesis(args):
     else:
         nrow = args.size[0]
         ncol = args.size[1]
-    
+
     if save:
         if not isdir(saving_folder):
             mkdir(saving_folder)
         imsave(saving_folder+'original.png', target_img)
 
     # Create Gaussian Pyramid downsamplers
-    target_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=False)                  
+    target_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=False)
     input_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=True)
     target_downsampler(target_img) # evaluate on the target image
 
@@ -220,25 +224,25 @@ def optim_synthesis(args):
 
     # Weights on scales
     prop = torch.ones(n_scales, device=DEVICE)/n_scales # all scales with same weight
-    
+
     # initialize the generated image
     fake_img = torch.rand(1, 3, nrow,ncol, device=DEVICE, requires_grad=True)
-    
+
     # intialize optimizer for image
     optim_img = torch.optim.Adam([fake_img], lr=0.01)
-    
+
     # initialize the loss vector
     total_loss = np.zeros(n_iter_max)
 
     # Main loop
     t = time.time()
     for it in range(n_iter_max):
-    
+
         # 1. update psi
         input_downsampler(fake_img.detach()) # evaluate on the current fake image
-        for s in range(n_scales):            
+        for s in range(n_scales):    
             optim_psi = torch.optim.ASGD([semidual_loss[s].psi], lr=1, alpha=0.5, t0=1)
-            for i in range(n_iter_psi):
+            for _ in range(n_iter_psi):
                 fake_data = input_im2pat(input_downsampler[s].down_img, n_patches_in)
                 optim_psi.zero_grad()
                 loss = -semidual_loss[s](fake_data)
@@ -247,7 +251,7 @@ def optim_synthesis(args):
             semidual_loss[s].psi.data = optim_psi.state[semidual_loss[s].psi]['ax']
 
         # 2. perform gradient step on the image
-        optim_img.zero_grad()        
+        optim_img.zero_grad()
         tloss = 0
         for s in range(n_scales):
             input_downsampler(fake_img)           
@@ -259,7 +263,7 @@ def optim_synthesis(args):
 
         # save loss
         total_loss[it] = tloss
-    
+
         # save some results
         if it % monitoring_step == 0:
             print('iteration '+str(it)+' - elapsed '+str(int(time.time()-t))+'s - loss = '+str(tloss))
@@ -278,7 +282,7 @@ def optim_synthesis(args):
         plt.close()
     if save:
         np.save(saving_folder+'loss.npy', total_loss)
-    
+
     return fake_img
 
 def learn_model(args):
@@ -293,16 +297,16 @@ def learn_model(args):
     usekeops = args.keops
     visu = args.visu
     save = args.save
-    
+
     # fixed parameters
     monitoring_step=100
     saving_folder='tmp/'
-    
+
     # parameters for Gaussian downsampling
     gaussian_kernel_size = 4
     gaussian_std = 1
     stride = 2
-    
+
     # load image
     target_img = imread(target_img_name)
 
@@ -312,7 +316,7 @@ def learn_model(args):
         imsave(saving_folder+'original.png', target_img)
 
     # Create Gaussian Pyramid downsamplers
-    target_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=False)                  
+    target_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=False)
     input_downsampler = create_gaussian_pyramid(gaussian_kernel_size, gaussian_std, n_scales, stride, pad=False)
     target_downsampler(target_img) # evaluate on the target image
 
@@ -332,14 +336,14 @@ def learn_model(args):
 
     # Weights on scales
     prop = torch.ones(n_scales, device=DEVICE)/n_scales # all scales with same weight
-    
+
     # initialize generator
     G = model.generator(n_scales)
     fake_img = model.sample_fake_img(G, target_img.shape, n_samples=1)
 
     # intialize optimizer for image
     optim_G = torch.optim.Adam(G.parameters(), lr=0.01)
-    
+
     # initialize the loss vector
     total_loss = np.zeros(n_iter_max)
 
@@ -350,10 +354,10 @@ def learn_model(args):
         # 1. update psi
         fake_img = model.sample_fake_img(G, target_img.shape, n_samples=1)
         input_downsampler(fake_img.detach())
-        
-        for s in range(n_scales):            
+
+        for s in range(n_scales):    
             optim_psi = torch.optim.ASGD([semidual_loss[s].psi], lr=1, alpha=0.5, t0=1)
-            for i in range(n_iter_psi):
+            for _ in range(n_iter_psi):
                  # evaluate on the current fake image
                 fake_data = input_im2pat(input_downsampler[s].down_img, n_patches_in)
                 optim_psi.zero_grad()
@@ -363,9 +367,9 @@ def learn_model(args):
             semidual_loss[s].psi.data = optim_psi.state[semidual_loss[s].psi]['ax']
 
         # 2. perform gradient step on the image
-        optim_G.zero_grad()        
+        optim_G.zero_grad()
         tloss = 0
-        input_downsampler(fake_img) 
+        input_downsampler(fake_img)
         for s in range(n_scales):        
             fake_data = input_im2pat(input_downsampler[s].down_img, n_patches_in)
             loss = prop[s]*semidual_loss[s](fake_data)
@@ -375,7 +379,7 @@ def learn_model(args):
 
         # save loss
         total_loss[it] = tloss.item()
-    
+
         # save some results
         if it % monitoring_step == 0:
             print('iteration '+str(it)+' - elapsed '+str(int(time.time()-t))+'s - loss = '+str(tloss.item()))
@@ -395,5 +399,5 @@ def learn_model(args):
         plt.close()
     if save:
         np.save(saving_folder+'loss.npy', total_loss)
-        
+
     return G
