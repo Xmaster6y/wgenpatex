@@ -196,8 +196,12 @@ def optim_synthesis(args):
         nrow = target_img.shape[2]
         ncol = target_img.shape[3]
     else:
-        nrow = args.size[0]
-        ncol = args.size[1]
+        size_str = ''.join(args.size)
+        size_str = size_str.split('[')[1]
+        size_str = size_str.split(']')[0]
+        size_list = size_str.split(',')
+        nrow = int(size_list[0])
+        ncol = int(size_list[1])
 
     if save:
         if not isdir(saving_folder):
