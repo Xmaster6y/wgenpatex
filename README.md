@@ -7,6 +7,7 @@ Code related to the paper https://arxiv.org/abs/2007.03408
 - model.py contains the generative model architecture
 - syntax `python run_optim_synthesis.py target_image_path --options` for running texture synthesis with image optimisation (Alg.1 from paper)
 - syntax `python run_cnn_synthesis.py target_image_path --options` for learning an convolutional neural network texture generator (Alg.2 from paper) (GPU recommanded)
+- syntax `python run_optim_patching.py target_image_path --options` for running image inpaiting with image optimisation (Alg.1bis from paper)
 
 replace --options with any:
 
