@@ -358,7 +358,7 @@ def optim_patching(args):
     # initialize the generated image
     fake_img = torch.rand(1, 3, nrow, ncol, device=DEVICE, requires_grad=False)
     fake_img = torch.where(is_patching,fake_img,target_img)
-    fake_img.requires_grad = True
+    fake_img[is_patching].requires_grad = True
     # intialize optimizer for image
     optim_img = torch.optim.Adam([fake_img], lr=0.01)
     var = fake_img[~is_patching]
