@@ -356,14 +356,12 @@ def optim_patching(args):
     prop = torch.ones(n_scales, device=DEVICE)/n_scales # all scales with same weight
 
     # initialize the generated image
-    fake_img = torch.rand(1, 3, nrow, ncol, device=DEVICE, requires_grad=False)
-    fake_img = torch.where(is_patching,fake_img,target_img)
-    fake_img[is_patching].requires_grad = True
+    fake_img_rand = torch.rand(1, 3, nrow, ncol, device=DEVICE, requires_grad=False)
+    fake_img = torch.where(is_patching, fake_img_rand, target_img)
+    fake_img_patch = fake_img[is_patching]
+    fake_img_patch.requires_grad = True
     # intialize optimizer for image
-    optim_img = torch.optim.Adam([fake_img], lr=0.01)
-    var = fake_img[~is_patching]
-    var_no_grad = var.detach()
-    var_no_grad.requires_grad = False
+    optim_img = torch.optim.Adam([fake_img_patch], lr=0.01)
     # initialize the loss vector
     total_loss = np.zeros(n_iter_max)
     # Main loop
@@ -371,6 +369,7 @@ def optim_patching(args):
     for it in range(n_iter_max):
 
         # 1. update psi
+        fake_img[is_patching] = fake_img_patch
         input_downsampler(fake_img.detach()) # evaluate on the current fake image
         for s in range(n_scales):    
             optim_psi = torch.optim.ASGD([semidual_loss[s].psi], lr=1, alpha=0.5, t0=1)
@@ -389,7 +388,7 @@ def optim_patching(args):
             input_downsampler(fake_img)           
             fake_data = input_im2pat(input_downsampler[s].down_img, n_patches_in)
             loss = prop[s]*semidual_loss[s](fake_data)
-            loss.backward()
+            loss.backward(retain_graph=True)
             tloss += loss.item()
         optim_img.step()
 
