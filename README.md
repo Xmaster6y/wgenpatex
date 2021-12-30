@@ -1,4 +1,14 @@
 # wgenpatex
+
+## Goal of this fork
+
+This fork implements the algorithm 1 bis from the paper https://arxiv.org/abs/2007.03408. This algorithm
+consists in recovering data on an image. To illustrate it, I followed the example
+of the article by chosing to do inpaiting on an image
+(demo_texture_1_patched.png).
+
+## Edited from original Readme
+
 Wasserstein Generative Models for Patch-based Texture Synthesis
 
 Code related to the paper https://arxiv.org/abs/2007.03408
