@@ -233,7 +233,7 @@ def optim_synthesis(args):
     fake_img = torch.rand(1, 3, nrow,ncol, device=DEVICE, requires_grad=True)
 
     # intialize optimizer for image
-    optim_img = torch.optim.Adam([fake_img], lr=0.01)
+    optim_img = torch.optim.Adam([fake_img], lr=0.05)
 
     # initialize the loss vector
     total_loss = np.zeros(n_iter_max)
@@ -289,6 +289,13 @@ def optim_synthesis(args):
 
     return fake_img
 
+
+def filter_patch(patches):
+    filtered_patches = patches[torch.all(patches!=0, dim=1)]
+    print(f"[INFO] {len(patches)-len(filtered_patches)} patches removed")
+    return filtered_patches
+
+
 def optim_patching(args):
     """
     Perform the texture synthesis of an examplar image
@@ -324,7 +331,6 @@ def optim_patching(args):
                 is_patching[i,j] = True
 
     is_patching = is_patching.repeat(1, 3, 1, 1)
-    print(is_patching.shape)
     # synthesized size
     nrow = target_img.shape[2]
     ncol = target_img.shape[3]
@@ -347,6 +353,7 @@ def optim_patching(args):
     semidual_loss = []
     for s in range(n_scales):
         real_data = target_im2pat(target_downsampler[s].down_img, n_patches_out) # exctract at most n_patches_out patches from the downsampled target images 
+        real_data = filter_patch(real_data)
         layer = semidual(real_data, device=DEVICE, usekeops=usekeops)
         semidual_loss.append(layer)
         if visu:
@@ -361,7 +368,7 @@ def optim_patching(args):
     fake_img_patch = fake_img[is_patching]
     fake_img_patch.requires_grad = True
     # intialize optimizer for image
-    optim_img = torch.optim.Adam([fake_img_patch], lr=0.01)
+    optim_img = torch.optim.Adam([fake_img_patch], lr=0.05)
     # initialize the loss vector
     total_loss = np.zeros(n_iter_max)
     # Main loop
