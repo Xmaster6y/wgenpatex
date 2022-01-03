@@ -18,6 +18,7 @@ def imread(img_name):
     """ 
     np_img = plt.imread(img_name)
     tens_img = torch.tensor(np_img, dtype=torch.float, device=DEVICE)
+    print(f" Image shape : {tens_img.shape}")
     if torch.max(tens_img) > 1:
         tens_img/=255
     if len(tens_img.shape) < 3:
@@ -290,10 +291,23 @@ def optim_synthesis(args):
     return fake_img
 
 
-def filter_patch(patches):
-    filtered_patches = patches[torch.all(patches!=0, dim=1)]
+def filter_patch(patches, debug=False):
+    redim_patches = torch.reshape(torch.reshape(patches, (-1,3,16)).transpose(1,2),(-1,4,4,3))
+    filtered_patches = redim_patches[torch.all(torch.reshape(~torch.all(redim_patches==0, dim=3), (-1,16)),dim=1)]
+    removed_patches = redim_patches[~torch.all(torch.reshape(~torch.all(redim_patches==0, dim=3), (-1,16)),dim=1)]
+    if debug:
+        print(filtered_patches.shape)
+        plt.figure()
+        ax = plt.gca()
+        ax.imshow(removed_patches[0])
+        plt.show()
+        plt.figure()
+        ax = plt.gca()
+        ax.imshow(filtered_patches[0])
+        plt.show()
+        raise SystemExit
     print(f"[INFO] {len(patches)-len(filtered_patches)} patches removed")
-    return filtered_patches
+    return torch.reshape(torch.reshape(filtered_patches,(-1,16,3)).transpose(1,2), (-1,48))
 
 
 def optim_patching(args):
@@ -392,10 +406,11 @@ def optim_patching(args):
         optim_img.zero_grad()
         tloss = 0
         for s in range(n_scales):
+            fake_img[is_patching] = fake_img_patch
             input_downsampler(fake_img)           
             fake_data = input_im2pat(input_downsampler[s].down_img, n_patches_in)
             loss = prop[s]*semidual_loss[s](fake_data)
-            loss.backward(retain_graph=True)
+            loss.backward(retain_graph=True)#
             tloss += loss.item()
         optim_img.step()
 
