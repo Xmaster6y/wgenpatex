@@ -3,9 +3,12 @@
 ## Goal of this fork
 
 This fork implements the algorithm 1 bis from the paper https://arxiv.org/abs/2007.03408. This algorithm
-consists in recovering data on an image. To illustrate it, I followed the example
+consists in recovering lost data of an image. To illustrate it, I followed the example
 of the article by chosing to do inpaiting on an image
 (demo_texture_1_patched.png).
+
+In addition to the previous file a presentation highlighting the key points of
+the article is provided.
 
 ## Edited from original Readme
 
