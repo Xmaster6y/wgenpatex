@@ -7,7 +7,7 @@ consists in recovering lost data of an image. To illustrate it, I followed the e
 of the article by chosing to do inpaiting on an image
 (demo_texture_1_patched.png).
 
-In addition to the previous file a presentation highlighting the key points of
+In addition to the previous file a presentation (in french) highlighting the key points of
 the article is provided.
 
 ## Edited from original Readme
